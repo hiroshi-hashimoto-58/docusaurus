@@ -1,14 +1,20 @@
-name: Deploy Docusaurus to GitHub Pages
+name: Deploy Docusaurus to GitHub Pages (official)
 
 on:
   push:
-    branches: [ "main" ]   # main に push したらデプロイ
+    branches: [ "main" ]   # main に push で公開
 
 permissions:
-  contents: write          # gh-pages に書き込み権限を付与
+  contents: read           # ソース取得のみ
+  pages: write             # Pages への書き込み
+  id-token: write          # OIDC での認証に必要
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
 
 jobs:
-  build-deploy:
+  build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -19,11 +25,19 @@ jobs:
           cache: 'npm'
 
       - run: npm ci
-      - run: npm run build  # build/ に静的ファイルが出力
+      - run: npm run build   # Docusaurus → ./build に出力
 
-      - name: Deploy to gh-pages branch
-        uses: peaceiris/actions-gh-pages@v3
+      # build/ を Pages 用アーティファクトとしてアップロード
+      - uses: actions/upload-pages-artifact@v3
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_branch: gh-pages
-          publish_dir: ./build
+          path: ./build
+
+  deploy:
+    needs: build
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
