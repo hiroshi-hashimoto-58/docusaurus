@@ -1,0 +1,29 @@
+name: Deploy Docusaurus to GitHub Pages
+
+on:
+  push:
+    branches: [ "main" ]   # main に push したらデプロイ
+
+permissions:
+  contents: write          # gh-pages に書き込み権限を付与
+
+jobs:
+  build-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: 'npm'
+
+      - run: npm ci
+      - run: npm run build  # build/ に静的ファイルが出力
+
+      - name: Deploy to gh-pages branch
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: ./build
